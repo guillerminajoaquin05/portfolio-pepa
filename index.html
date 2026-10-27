@@ -77,6 +77,15 @@
       transform:translateY(6px); transition:transform 0.3s var(--ease);
     }
     .nav-links a:hover, .nav-links a.active { transform:translateY(0); }
+    /* ES / EN switch */
+    .lang { display:flex; align-items:center; gap:0.4rem; margin:0 1.3rem 0.8rem auto; font-family:var(--mono); font-size:0.7rem; color:var(--ink3); position:relative; z-index:300; }
+    .lang button { position:relative; background:none; border:none; cursor:pointer; font:inherit; letter-spacing:0.05em; color:var(--ink3); padding:0.25rem 0.1rem; transition:color 0.2s; }
+    .lang button:hover, .lang button[aria-pressed="true"] { color:var(--ink); }
+    .lang button::after { content:''; position:absolute; left:0; right:0; bottom:-2px; height:1.5px; background:var(--accent); transform:scaleX(0); transition:transform 0.3s var(--ease); }
+    .lang button[aria-pressed="true"]::after { transform:scaleX(1); }
+    body { transition:opacity 0.18s var(--ease); }
+    body.switching { opacity:0; }
+    html[lang="en"] .stack .is-wip .folder-meta::before { content:'● In progress · '; }
     .nav-toggle { display:none; background:none; border:none; cursor:pointer; flex-direction:column; gap:5px; z-index:300; margin-bottom:0.9rem; }
     .nav-toggle span { display:block; width:22px; height:2px; background:var(--ink); border-radius:2px; }
     @media (max-width:860px) {
@@ -439,6 +448,9 @@
       <img src="logo-sm.png" alt="Pepa" class="nav-logo-img"/>
       <span class="nav-wordmark">PEPA<em>.</em></span>
     </a>
+    <div class="lang" role="group" aria-label="Idioma">
+      <button type="button" data-lang="es" aria-pressed="true">ES</button><span aria-hidden="true">/</span><button type="button" data-lang="en" aria-pressed="false">EN</button>
+    </div>
     <ul class="nav-links" id="navLinks">
       <li><a href="#projects" class="c-manila">Casos</a></li>
       <li><a href="#services" class="c-blue">Servicios</a></li>
@@ -867,11 +879,12 @@ const projects = {
 
 /* MODAL */
 function openModal(id){
-  const d=projects[id]; if(!d) return;
+  const base=projects[id]; if(!base) return;
+  const d=lang==='en'?{...base,...projectsEN[id]}:base;
   const media=d.video?`<div class="modal-video"><iframe src="${d.video}" allow="autoplay; fullscreen" allowfullscreen title="${d.title}"></iframe></div>`
              :d.img?`<img src="${d.img}" alt="${d.imgAlt}" class="modal-img"${d.imgPos?` style="object-position:${d.imgPos}"`:''}>`:'';
-  const gallery=d.gallery?`<p class="hand-note modal-gallery-note">el prototipo, pantalla por pantalla →</p><div class="modal-gallery">${d.gallery.map(src=>`<img src="${src}" alt="" loading="lazy">`).join('')}</div>`:'';
-  const wip=d.wip?`<span class="wip">En progreso</span>`:'';
+  const gallery=d.gallery?`<p class="hand-note modal-gallery-note">${t('el prototipo, pantalla por pantalla →')}</p><div class="modal-gallery">${d.gallery.map(src=>`<img src="${src}" alt="" loading="lazy">`).join('')}</div>`:'';
+  const wip=d.wip?`<span class="wip">${t('En progreso')}</span>`:'';
   const kpis=d.kpis.length?`<div class="modal-kpis">${d.kpis.map(k=>`<div class="kpi"><div class="kpi-n">${k.n}</div><div class="kpi-l">${k.l}</div></div>`).join('')}</div>`:'';
   const links=d.links.length?`<div class="modal-links">${d.links.map(l=>l.url?`<a href="${l.url}" target="_blank" rel="noopener" class="modal-link-btn">${l.icon} ${l.label}</a>`:`<span class="modal-link-btn disabled">${l.icon} ${l.label}</span>`).join('')}</div>`:'';
   document.getElementById('modalInner').innerHTML=`${media}<div class="modal-body"><p class="modal-tag">${d.tag}</p><h2 class="modal-title">${d.title}</h2><p class="modal-period">${wip}<span>${d.period}</span></p><div class="modal-text">${d.body}</div>${gallery}${kpis}${links}</div>`;
@@ -901,7 +914,7 @@ navLinks.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>navLink
 const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* HERO — wrap each word so it can rise in */
-(function splitWords(el){
+function splitWords(el){
   let i=0;
   const walk=node=>{
     [...node.childNodes].forEach(n=>{
@@ -919,7 +932,9 @@ const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
     });
   };
   walk(el);
-})(document.querySelector('.hero-h1'));
+}
+const heroH1=document.querySelector('.hero-h1'), heroHTML=heroH1.innerHTML;
+splitWords(heroH1);
 
 /* REVEAL */
 const obs=new IntersectionObserver(entries=>{ entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('visible'); obs.unobserve(e.target); } }); },{threshold:0.12});
@@ -1011,6 +1026,196 @@ function onScroll(){
 addEventListener('scroll',()=>{ if(!ticking){ ticking=true; requestAnimationFrame(onScroll); } },{passive:true});
 addEventListener('resize',onScroll);
 onScroll();
+
+/* ── LANGUAGE (ES / EN) ──
+   The HTML is written in Spanish. Every visible text fragment is looked up in EN below,
+   so adding or editing a translation only means touching this dictionary. */
+const EN={
+  'Casos':'Work','Servicios':'Services','Visión':'Vision','Contacto':'Contact',
+  'Comunicadora Visual · Buenos Aires':'Visual Communicator · Buenos Aires',
+  'Transformo la observación en piezas de comunicación':'I turn observation into communication pieces',
+  'con alma.':'with soul.',
+  'Estrategia digital 360° con sensibilidad fotográfica. Ver lo que otros no ven — y convertirlo en contenido que conecta marcas con personas reales.':'360° digital strategy with a photographer’s eye. Seeing what others miss — and turning it into content that connects brands with real people.',
+  'Ver trabajos':'See my work','Hablemos':'Let’s talk','yo.png':'me.png',
+  'lo-que-hago/':'what-i-do/','scrolleá y hacela girar ↷':'scroll to make it spin ↷',
+  'Dirección de Arte':'Art Direction','direccion-arte/':'art-direction/','Post-Producción':'Post-Production',
+  'Desarrollo Web':'Web Development','Fotografía':'Photography','foto/':'photo/',
+  'Sobre mí':'About me','hola, soy yo ↘':'hi, that’s me ↘',
+  'Soy Guillermina Joaquin, pero muchos me conocen como':'I’m Guillermina Joaquin, but most people know me as',
+  '. Comunicadora Digital formada en la UCA, con experiencia en fotografía y producción de contenido visual, estrategia digital y community management, y producción audiovisual —':'. A Digital Communicator trained at UCA, with experience in photography and visual content production, digital strategy and community management, and audiovisual production —',
+  'del podcast al cortometraje documental.':'from podcasts to documentary short films.',
+  'Mi filosofía se centra en la palabra':'My philosophy revolves around the word','foto':'photo',
+  ': no busco capturar un objeto en sí, sino lo que pasa a su alrededor. Esa observación profunda transforma una pieza de comunicación en algo que la gente siente.':': I’m not trying to capture an object itself, but what happens around it. That close observation turns a piece of communication into something people feel.',
+  'números que hablan solos ↴':'numbers that speak for themselves ↴',
+  'Comunidad':'Community','Seguidores orgánicos en 2 meses':'Organic followers in 2 months',
+  'Estrategia':'Strategy','Estrategia digital integral':'Integrated digital strategy',
+  'Marcas':'Brands','Proyectos de marca desde cero':'Brand projects built from scratch',
+  'Formación':'Education','Comunicación Digital e Interactiva':'Digital & Interactive Communication',
+  'Todos los días busco conocer algo nuevo. Cuanto más amplíe':'Every day I try to learn something new. The more I expand',
+  'mi mundo':'my world',', más le puedo mostrar al resto.':', the more I can show everyone else.',
+  'Casos de éxito':'Case studies','Proyectos que':'Projects that','dejan huella':'leave a mark',
+  'abrí cada carpeta ↴':'open each folder ↴',
+  'pasan solas · tocá una pestaña para saltar ↓':'they flip on their own · tap a tab to jump ↓',
+  'de':'of','archivos':'files','en-progreso/':'in-progress/','casos/':'cases/',
+  '3 archivos':'3 files','6 archivos':'6 files','En progreso':'In progress',
+  'Diseño web · E-commerce':'Web design · E-commerce',
+  'Sitio web y tienda online para una empresa de colocación y restauración de pisos de madera. Diseño, desarrollo y organización de contenidos: servicios, productos, cotizador y FAQs.':'Website and online store for a hardwood floor installation and restoration company. Design, development and content structure: services, products, quote tool and FAQs.',
+  'servicios · productos':'services · products','lanzamiento':'launch',
+  'Diseño web · Marca personal':'Web design · Personal brand',
+  'Portfolio web bilingüe para una profesional de producción digital y asistencia creativa. Diseño y desarrollo del sitio, con secciones de perfil, servicios, trabajos y contacto.':'Bilingual portfolio website for a digital production and creative assistance professional. Site design and development, with profile, services, work and contact sections.',
+  'bilingüe':'bilingual',
+  'Video · Producción audiovisual':'Video · Audiovisual production',
+  'Pieza audiovisual para Estancia Villa María: rodaje y edición de un video que retrata el lugar, su paisaje y su atmósfera.':'Audiovisual piece for Estancia Villa María: shooting and editing a video that portrays the place, its landscape and its atmosphere.',
+  'rodaje · edición':'shooting · editing','próximamente':'coming soon',
+  'Branding · UX/UI · Prototipo':'Branding · UX/UI · Prototype',
+  'App de delivery 100% plant-based, proyecto de la facultad. Desarrollamos la marca completa y prototipamos la app, del login al seguimiento del pedido.':'A 100% plant-based delivery app, built as a university project. We developed the full brand and prototyped the app, from login to order tracking.',
+  'pantallas':'screens','Marca':'Brand','logo · redes':'logo · social',
+  'Branding · Diseño web':'Branding · Web design',
+  'Proyecto integral de principio a fin: idea, identidad de marca y desarrollo web para una plataforma pensada para la comunidad musical porteña.':'An end-to-end project: concept, brand identity and web development for a platform built for Buenos Aires’ music community.',
+  'idea · marca · web':'concept · brand · web',
+  'Proyecto integral de comunicación nacido en Madrid. Identidad visual desde cero, estrategia, copywriting y community management para argentinos en la diáspora.':'A full communication project born in Madrid. Visual identity from scratch, strategy, copywriting and community management for Argentines abroad.',
+  'seguidores en 2 meses':'followers in 2 months','orgánico':'organic',
+  'Fotografía · Producto':'Photography · Product',
+  'Banco de imágenes para emprendimiento de ilustraciones. Fotografía de producto y conceptual que captura la personalidad creativa de la marca.':'Image bank for an illustration brand. Product and conceptual photography that captures the brand’s creative personality.',
+  'producciones':'shoots',
+  'Live broadcast de 45\' + podcast editado de 10\'. Operación de mixer, guion y edición con narrativa intercultural. UFV Madrid, 2025.':'45\' live broadcast + 10\' edited podcast. Mixer operation, scripting and editing with an intercultural narrative. UFV Madrid, 2025.',
+  'Documental':'Documentary',
+  'Cortometraje documental con producción integral: ideación, scouting, entrevistas y edición narrativa. Del guion a la pantalla — UCA · 2023.':'Documentary short with end-to-end production: concept, location scouting, interviews and narrative editing. From script to screen — UCA · 2023.',
+  'Lo que puedo hacer':'What I can do','por tu':'for your','marca':'brand',
+  'Pensados para equipos de contenido, estudios de producción y marcas que quieren comunicar con intención y ADN cultural real.':'Designed for content teams, production studios and brands that want to communicate with intention and real cultural DNA.',
+  'Estrategias digitales con ADN cultural. Narrativas que conectan con audiencias reales, con foco en comunidades orgánicas y engagement medible.':'Digital strategies with cultural DNA. Narratives that connect with real audiences, focused on organic communities and measurable engagement.',
+  'Métricas':'Metrics',
+  'Fotografía y dirección de arte que conecta emocionalmente. De la conceptualización al retoque final, con una mirada que entiende el alma detrás del producto.':'Photography and art direction that connect emotionally. From concept to final retouch, with an eye for the soul behind the product.',
+  'Dir. de Arte':'Art Direction','Identidad Visual':'Visual Identity',
+  'Producción integral audiovisual del guion a la post-producción técnica. Podcasts, documentales y videos de marca con narrativa de largo aliento.':'End-to-end audiovisual production, from script to technical post-production. Podcasts, documentaries and brand videos with long-form storytelling.',
+  'Guion':'Scripting','Edición':'Editing',
+  'Diseño & Desarrollo Web':'Web Design & Development',
+  'Sitios y tiendas online pensados desde la comunicación: identidad, contenidos y navegación claros para que la marca se entienda en segundos.':'Websites and online stores built with a communication mindset: clear identity, content and navigation so the brand is understood in seconds.',
+  'Diseño Web':'Web Design',
+  'Futuras colaboraciones':'Future collaborations','hacia dónde voy ↷':'where I’m headed ↷',
+  'Donde la cultura auditiva y visual':'Where audio and visual culture','convergen':'converge',
+  'Mi objetivo es aplicar esta mirada estratégica y sensible en entornos donde la cultura auditiva y visual se fusionan — aportando una visión 360° que entiende el alma detrás de cada track y cada historia.':'My goal is to bring this strategic, sensitive eye to spaces where audio and visual culture merge — offering a 360° vision that understands the soul behind every track and every story.',
+  '+ Cultura digital':'+ Digital culture','+ Producción multiplataforma':'+ Multiplatform production',
+  '¿Tenés un proyecto que merece':'Got a project that deserves','una mirada diferente':'a different perspective',
+  'Escribime':'Write to me','te escucho ✷':'I’m listening ✷',
+  'Ubicación':'Location','Buenos Aires, Argentina · Disponible de forma remota':'Buenos Aires, Argentina · Available remotely',
+  'Comunicación Digital e Interactiva · UCA':'Digital & Interactive Communication · UCA','Redes':'Social',
+  '© 2026 · Comunicadora Visual & Productora de Contenido · UCA Buenos Aires':'© 2026 · Visual Communicator & Content Producer · UCA Buenos Aires',
+  'el prototipo, pantalla por pantalla →':'the prototype, screen by screen →',
+  // alt texts and labels
+  'Idioma':'Language','Menú':'Menu','Cerrar':'Close','Disciplinas':'Disciplines',
+  'Carpeta anterior':'Previous folder','Carpeta siguiente':'Next folder',
+  'Pepa sacando una foto con su cámara':'Pepa taking a photo with a camera',
+  'Pepa haciendo el saludo de paz':'Pepa making a peace sign',
+  'Pepa con auriculares tirando un beso':'Pepa wearing headphones, blowing a kiss',
+  'LAD Flooring — home del sitio':'LAD Flooring — website home page',
+  'Juana Salonia — home del sitio':'Juana Salonia — website home page',
+  'Casco de la Estancia Villa María reflejado en el lago':'Estancia Villa María’s main house reflected in the lake',
+  'Ready Veggie Go — pantalla de inicio de la app':'Ready Veggie Go — app splash screen'
+};
+
+/* long project texts shown in the modal */
+const projectsEN={
+  lad:{ tag:'Web Design · E-commerce · Development', period:'2026 · Launching soon', imgAlt:'LAD Flooring — website home page',
+    kpis:[{n:'Web + Shop',l:'Website and online store'},{n:'5',l:'Main sections'},{n:'Soon',l:'Launch'}],
+    links:[{label:'Site in development',url:'',icon:'◷'}],
+    body:`<p><strong>LAD Flooring</strong> is a company with 20 years of experience installing, restoring and maintaining hardwood floors. The challenge: bring that craft into a digital presence that conveys quality and trust — and lets them sell products online.</p>
+    <p>I worked on the design and development of the site: a warm, understated look with a wood-inspired palette, and navigation built so customers quickly find what they need — <strong>services, products, about, contact and FAQs</strong> — with direct access to <strong>request a quote</strong> and a shopping cart.</p>
+    <p>The project is in its final development stage and will launch soon.</p>` },
+  juana:{ tag:'Web Design · Personal Brand · Development', period:'2026 · Launching soon', imgAlt:'Juana Salonia — website home page',
+    kpis:[{n:'EN / ES',l:'Bilingual site'},{n:'5',l:'Sections'},{n:'Soon',l:'Launch'}],
+    links:[{label:'Site in development',url:'',icon:'◷'}],
+    body:`<p>Portfolio website for <strong>Juana Salonia</strong>, a <strong>digital production and creative assistance</strong> professional. The goal: a clear introduction full of personality that presents Juana’s profile and way of working in just a few seconds.</p>
+    <p>I designed and developed a <strong>bilingual (English and Spanish)</strong> site with a striking full-screen home page and profile, services, work and contact sections, prioritizing easy reading and a consistent identity in every detail.</p>
+    <p>The project is in its final development stage and will launch soon.</p>` },
+  evm:{ tag:'Video · Audiovisual Production', period:'2026 · Coming soon',
+    kpis:[{n:'Video',l:'Shooting and editing'},{n:'Soon',l:'Release'}],
+    body:`<p>Audiovisual piece for <strong>Estancia Villa María</strong>. The goal: show the place through its landscape, its architecture and its atmosphere, with a rhythm that invites people to visit.</p>
+    <p>I worked on the <strong>shooting and editing</strong> of the video, taking care of light, framing and pacing so every shot says something about the space.</p>
+    <p>The video hasn’t been released yet — this is a preview of the final cut.</p>` },
+  rvg:{ tag:'Branding · UX/UI · App Prototyping', period:'University project', imgAlt:'Ready Veggie Go — Instagram feed and branded delivery bag',
+    kpis:[{n:'17',l:'Prototyped screens'},{n:'100%',l:'Plant-based'},{n:'Brand',l:'Logo · palette · social'}],
+    body:`<p><strong>Ready Veggie Go</strong> is a 100% plant-based delivery app designed to make eating vegan simple: <em>“con nosotros ser vegano es más fácil”</em> (with us, going vegan is easier).</p>
+    <p>It was a university project where we handled <strong>the entire brand development</strong> — name, logo, gradient palette and social pieces like the Instagram feed, packaging and promos — and the <strong>app prototype</strong>.</p>
+    <p>The prototype covers the full flow: login, home with categories, restaurant search and filters, menu, cart, payment methods, order tracking on a map, profile and help.</p>` },
+  pepi:{ tag:'Branding · Community Management · Metrics', period:'February 2025 – May 2025 · Madrid, Spain', imgAlt:'@pepi.busca.arg — product photography',
+    kpis:[{n:'120+',l:'Organic followers'},{n:'<2m',l:'To an active community'},{n:'0€',l:'Ad spend'}],
+    body:`<p>This project was born during my exchange in Spain and is the purest expression of my philosophy of <strong>‘taking photos with the mind and the heart’</strong>. Feeling homesick, I turned that emotion into a purpose: building a bridge between two cultures.</p>
+    <p><strong>@pepi.busca.arg</strong> wasn’t just an Instagram account; it was a full communication project where I built a brand from scratch, told stories and grew a community for those who, like me, were looking for a little piece of Argentina in Madrid.</p>
+    <p>I worked on concept and visual identity, strategy and content calendar, content creation and editing, copywriting, community management and metrics analysis. The result proved that authenticity and emotion are the key to building a loyal community.</p>` },
+  boludeces:{ tag:'Product Photography · Conceptual Photography · Art Direction', period:'July – August 2025', imgAlt:'Boludeces.jpg — stickers and illustrations',
+    kpis:[{n:'2',l:'Full shoots'},{n:'∞',l:'Objects with soul'}],
+    links:[{label:'See on Instagram',url:'https://www.instagram.com/boludeces.jpg/',icon:'↗'}],
+    body:`<p>I collaborated with <strong>@boludeces.jpg</strong>, an illustration brand, to build an image bank that reflected both the quality of its products and the brand’s creative personality. Two shoots, one essence.</p>
+    <p><strong>Product Photography:</strong> a session focused on capturing the essence of the illustrations and stickers. The goal: highlight paper quality, vivid colors and the fine details of each design. Clean, appealing and versatile images for the online store and social media.</p>
+    <p><strong>Conceptual Photography:</strong> for the launch of a kitchen towel, I developed a shoot inspired by the aesthetic of <em>The Bear</em>. The goal wasn’t just to show the product, but to tell a story and connect the brand with a culturally relevant universe.</p>` },
+  palmundo:{ tag:'Podcast · Live Broadcast · Technical Production', period:'January 2025 – May 2025 · Madrid, Spain', imgAlt:'Pa’l Mundo — recording studio',
+    kpis:[{n:'45m',l:'Live broadcast'},{n:'10m',l:'Edited podcast'},{n:'3',l:'Simultaneous roles'}],
+    body:`<p>During my exchange at UFV, I took part in <strong>“Pal Mundo”</strong>, a communication project exploring intercultural dialogue through two formats: a 45-minute live broadcast and a 10-minute edited podcast version.</p>
+    <p>Although my on-mic role was <em>Speaker</em>, my real passion was behind the scenes: I was actively involved in moderation, running the mixer during the live show and the editing that shaped each episode’s final narrative.</p>
+    <p><strong>Script and Moderation:</strong> structuring the conversation in both formats. <strong>Technical Production:</strong> running the audio mixer to ensure live quality. <strong>Editing:</strong> condensing 45 minutes into a 10-minute podcast, choosing the key moments for the narrative.</p>` },
+  amor:{ tag:'Documentary Short · Audiovisual Communication · UCA', period:'July – November 2023', imgAlt:'El Amor a través del tiempo — documentary',
+    kpis:[{n:'3',l:'Production stages'},{n:'∞',l:'Voices of love'}],
+    links:[{label:'Watch the documentary',url:'https://drive.google.com/file/d/1_kM6RE2zdD1Bnt9Nf9IYQp0Mlca3SJIm/view?t=71',icon:'▶'}],
+    body:`<p>As the final project for the <strong>Audiovisual Communication</strong> course at UCA, the challenge was to make a production with a clear storytelling line. I chose to explore a universal theme: love, through the voices of different people, creating a mosaic of its many meanings.</p>
+    <p><strong>Pre-production:</strong> developing the concept, writing key questions and scouting locations that would create an intimate setting for the testimonies.</p>
+    <p><strong>Production:</strong> interviews focused on active listening to capture honest, spontaneous testimonies. <strong>Post-production:</strong> I brought diverse perspectives together into a single, fluid and moving narrative — the edit was as much an author as the script.</p>` },
+  noize:{ tag:'Branding · Web Design · Development', period:'2025', imgAlt:'Noize — the voice of your music',
+    kpis:[{n:'Full',l:'From idea to product'}],
+    links:[{label:'Visit site',url:'https://guillerminajoaquin05.github.io/Noize2.0/index.html',icon:'↗'}],
+    body:`<p><strong>Noize</strong> is a platform built for Buenos Aires’ music community: a space to review albums, find live shows and discover the city’s best record stores.</p>
+    <p>I worked on the project end to end — from the original idea and brand identity to the design and development of the website. A chance to apply my visual communication eye to a complete digital product, with its own voice and an aesthetic that connects with Buenos Aires’ listening culture.</p>` }
+};
+
+let lang='es';
+const norm=s=>s.replace(/\s+/g,' ').trim();
+const t=s=>lang==='en'?(EN[norm(s)]??s):s;
+const origText=new WeakMap(), origAttr=new WeakMap();
+
+// swap every text node (and alt / aria-label) under root, keeping the surrounding whitespace
+function translateTree(root){
+  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.parentElement.closest('script,style,.hero-h1,#modalInner')?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT});
+  while(walker.nextNode()){
+    const n=walker.currentNode;
+    if(!origText.has(n)) origText.set(n,n.nodeValue);
+    const es=origText.get(n), m=es.match(/^(\s*)([\s\S]*?)(\s*)$/);
+    n.nodeValue=lang==='en'&&EN[norm(m[2])]?m[1]+EN[norm(m[2])]+m[3]:es;
+  }
+  root.querySelectorAll('[alt],[aria-label]').forEach(el=>{
+    if(!origAttr.has(el)) origAttr.set(el,{alt:el.getAttribute('alt'),aria:el.getAttribute('aria-label')});
+    const o=origAttr.get(el);
+    if(o.alt) el.setAttribute('alt',t(o.alt));
+    if(o.aria) el.setAttribute('aria-label',t(o.aria));
+  });
+}
+function renderHero(){
+  heroH1.innerHTML=heroHTML;
+  if(lang==='en'){ const w=document.createTreeWalker(heroH1,NodeFilter.SHOW_TEXT); while(w.nextNode()){ const n=w.currentNode, m=n.nodeValue.match(/^(\s*)([\s\S]*?)(\s*)$/); if(EN[norm(m[2])]) n.nodeValue=m[1]+EN[norm(m[2])]+m[3]; } }
+  splitWords(heroH1);
+}
+function applyLang(next){
+  lang=next;
+  document.documentElement.lang=lang;
+  translateTree(document.body);
+  renderHero();
+  document.querySelectorAll('.lang button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.lang===lang)));
+  try{ localStorage.setItem('lang',lang); }catch(e){}
+}
+function setLang(next){
+  if(next===lang) return;
+  if(reduceMotion){ applyLang(next); return; }
+  document.body.classList.add('switching');
+  setTimeout(()=>{ applyLang(next); document.body.classList.remove('switching'); },180);
+}
+document.querySelectorAll('.lang button').forEach(b=>b.addEventListener('click',()=>setLang(b.dataset.lang)));
+
+// ?lang=en in the link wins, then the visitor's last choice, then the browser language
+(function initLang(){
+  let saved=null; try{ saved=localStorage.getItem('lang'); }catch(e){}
+  const param=new URLSearchParams(location.search).get('lang');
+  const pick=[param,saved].find(v=>v==='es'||v==='en') || (/^en\b/i.test(navigator.language||'')?'en':'es');
+  if(pick==='en') applyLang('en');
+})();
 </script>
 </body>
 </html>
